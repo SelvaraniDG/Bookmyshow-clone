@@ -1,0 +1,84 @@
+/* Container for the entire auth form */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: hsla(0, 1%, 25%, 0.121); 
+    padding: 0 10px;
+  }
+  
+  /* Wrapper for the auth form */
+  .auth-form-wrapper {
+    background-color: #ffffff; /* White background for the form */
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 300px; /* Adjust the width of the form */
+    width: 100%;
+  }
+  
+  /* Header of the auth form */
+  .auth-form-header {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  /* Styling for form fields */
+  .auth-form-field {
+    margin-bottom: 15px;
+  }
+  
+  .auth-form-field label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  
+  .auth-form-field input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    outline: none; /* Remove default focus outline */
+    transition: border-color 0.3s ease;
+  }
+  
+  .auth-form-field input:focus {
+    border-color: #6148ed; /* Blue border on focus */
+  }
+  
+  /* Styling for error messages */
+  .auth-error {
+    color: #ff4d4d;
+    font-size: 10px;
+    margin-top: 2px;
+  }
+  
+  /* Styling for the submit button */
+  .auth-submit-btn {
+    background-color: #6148ed; /* Purple color */
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease;
+  }
+  
+  .auth-submit-btn:hover {
+    background-color: #5743c7; /* Darker purple on hover */
+  }
+  
+  /* Styling for the link */
+  .auth-link {
+    color: #6148ed; /* Purple color for links */
+    text-decoration: none;
+  }
+  
+  .auth-link:hover {
+    text-decoration: none;
+  }  
