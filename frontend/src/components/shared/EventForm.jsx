@@ -17,7 +17,6 @@ import LocationGrey from '../../assets/icons/locationgrey';
 import IndianRupee from '../../assets/icons/Indianrupee';
 import Calendar from '../../assets/icons/Calendar';
 import Link from '../../assets/icons/link';
-import convertFileToUrl from './FileUploader';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { createEvent } from '../../redux/eventSlice';
@@ -36,7 +35,20 @@ const EventForm = ({ type }) => {
     let uploadedImageUrl = values.imageUrl;
 
     if (files.length > 0) {
-      uploadedImageUrl = files[0] ? convertFileToUrl(files[0]) : uploadedImageUrl;
+      // The image URL from the backend is updated
+      const formData = new FormData();
+      formData.append('file', files[0]);
+
+      try {
+        const response = await fetch('http://localhost:8001/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await response.json();
+        uploadedImageUrl = data.imageUrl;
+      } catch (error) {
+        console.error('Error uploading file:', error);
+      }
     }
 
     try {
@@ -50,12 +62,12 @@ const EventForm = ({ type }) => {
       const newEvent = await dispatch(createEvent({
         ...values,
         imageUrl: uploadedImageUrl,
-        created_by: user_id, // Include created_by in the event data
+        created_by: user_id, 
       })).unwrap();
 
       if (newEvent) {
-        form.reset(); // Reset the form
-        navigate(`/events/${newEvent.event_id}`);
+        form.reset(); // for resetting the form
+        navigate(`/`);
       }
     } catch (error) {
       console.log(error);
@@ -133,8 +145,6 @@ const EventForm = ({ type }) => {
                   <FormControl>
                     <div className="flex-center h-[54px] w-full overflow-hidden rounded-full bg-grey-50 px-4 py-2">
                     <LocationGrey width="24" height="24" alt="Calendar" />
-                      
-
                       <Input placeholder="Event location or Online" {...field} className="input-field" />
                     </div>
 
@@ -220,14 +230,12 @@ const EventForm = ({ type }) => {
                                   checked={field.value}
                                 id="isFree" className="mr-2 h-5 w-5 border-2 border-primary-500" />
                               </div>
-          
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />   
                     </div>
-
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -241,17 +249,14 @@ const EventForm = ({ type }) => {
                   <FormControl>
                     <div className="flex-center h-[54px] w-full overflow-hidden rounded-full bg-grey-50 px-4 py-2">
                       <Link />
-
                       <Input placeholder="URL" {...field} className="input-field" />
                     </div>
-
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
         </div>
-
 
         <Button 
           type="submit"
@@ -264,7 +269,7 @@ const EventForm = ({ type }) => {
           ): `${type} Event `}</Button>
       </form>
     </Form>
-  )
+  );
 }
 
 export default EventForm;

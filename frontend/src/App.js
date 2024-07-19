@@ -6,7 +6,7 @@ import Home from './pages/Home';
 import CreateEvent from './pages/events/create/CreateEvent';
 import Layout from './components/Layout';
 import MyProfile from './pages/profile/MyProfile';
-// import EventDetails from './pages/events/EventDetails';
+import EventDetail from './pages/events/EventDetail';
 
 function App() {
   return (
@@ -19,7 +19,7 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/events/create" element={<CreateEvent />} />
         <Route path="/profile" element={<MyProfile />} />
-        {/* <Route path="/eventdetails" element={<EventDetails />} /> */}
+        <Route path="/event-details/:event_id" element={<EventDetail />} />
       </Routes>
     </main>
     </Layout>

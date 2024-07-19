@@ -22,8 +22,8 @@ import { Input } from '../ui/input';
 const Dropdown = ({ value, onChangeHandler }) => {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
+  const [selectedCategoryName, setSelectedCategoryName] = useState('');
 
-  // Function to create a new category
   const handleAddCategory = async () => {
     try {
       const response = await fetch('http://localhost:8001/categories', {
@@ -39,7 +39,7 @@ const Dropdown = ({ value, onChangeHandler }) => {
       }
 
       const data = await response.json();
-      const addedCategory = { id: data.id, cat_name: newCategory.trim() };
+      const addedCategory = { id: data.categoryId, cat_name: newCategory.trim() };
       
       setCategories(prevState => [
         ...prevState,
@@ -47,11 +47,31 @@ const Dropdown = ({ value, onChangeHandler }) => {
       ]);
       setNewCategory('');
       
-      // Set the newly added category as selected
       onChangeHandler(addedCategory.id);
+      setSelectedCategoryName(addedCategory.cat_name);
     } catch (error) {
       console.error('Error creating category:', error);
     }
+  };
+
+  const fetchCategoryNameById = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:8001/categories/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch category name');
+      }
+      const data = await response.json();
+      return data.cat_name;
+    } catch (error) {
+      console.error('Error fetching category name:', error);
+      return '';
+    }
+  };
+
+  const handleCategoryChange = async (id) => {
+    onChangeHandler(id);
+    const categoryName = await fetchCategoryNameById(id);
+    setSelectedCategoryName(categoryName);
   };
 
   // Fetch all categories
@@ -72,12 +92,12 @@ const Dropdown = ({ value, onChangeHandler }) => {
     fetchCategories();
   }, []);
 
- 
-
   return (
-    <Select value={value} onValueChange={onChangeHandler}>
+    <Select value={value} onValueChange={handleCategoryChange}>
       <SelectTrigger className="select-field">
-      <SelectValue placeholder='Category' />
+        <SelectValue placeholder="Category">
+          {selectedCategoryName}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {categories.length > 0 && categories.map((category) => (
