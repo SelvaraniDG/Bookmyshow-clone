@@ -2,45 +2,24 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Button } from '../ui/button';
 import Upload from '../../assets/icons/upload';
-import axios from 'axios';
 
-// Helper function to convert file to URL (for preview)
-function convertFileToUrl(file) {
+export default function convertFileToUrl(file) {
   return URL.createObjectURL(file);
-}
+};
 
 // FileUploader Component
 export function FileUploader({ imageUrl, onFieldChange, setFiles }) {
-  const onDrop = useCallback(async (acceptedFiles) => {
+  const onDrop = useCallback((acceptedFiles) => {
     setFiles(acceptedFiles);
     if (acceptedFiles[0]) {
-      const file = acceptedFiles[0];
-      // Create FormData to send file
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        // Upload file to backend
-        const response = await axios.post('http://localhost:8001/upload', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-
-        // Assuming backend returns image URL in response
-        if (response.data && response.data.imageUrl) {
-          onFieldChange(response.data.imageUrl);
-        }
-      } catch (error) {
-        console.error('Error uploading file:', error);
-      }
+      onFieldChange(convertFileToUrl(acceptedFiles[0]));
     }
   }, [setFiles, onFieldChange]);
 
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     accept: 'image/*',
-    multiple: false,
+    multiple: false, 
   });
 
   return (
@@ -62,7 +41,7 @@ export function FileUploader({ imageUrl, onFieldChange, setFiles }) {
         </div>
       ) : (
         <div className="flex-center flex-col py-5 text-grey-500">
-          <Upload />
+         <Upload />
           <h3 className="mb-2 mt-2">Drag photo here</h3>
           <p className="p-medium-12 mb-4">SVG, PNG, JPG</p>
           <Button type="button" className="rounded-full">

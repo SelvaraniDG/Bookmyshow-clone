@@ -1,6 +1,6 @@
 import React from 'react';
-import Header from './shared/Header';
-import Footer from './shared/Footer';
+import Header from './common/Header';
+import Footer from './common/Footer';
 
 const Layout = ({ children }) => {
   return (

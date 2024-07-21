@@ -3,31 +3,11 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+
 
 const app = express();
 app.use(cors());
-app.use(express.json());
-
-// Ensure the uploads directory exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Set up storage engine for multer
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ storage: storage });
+app.use(express.json()); 
 
 const db = mysql.createConnection({
   user: process.env.DB_USER,
@@ -38,11 +18,15 @@ const db = mysql.createConnection({
 
 //****** users table ****************//
 
-// Create a new user (sign up)
+//create a new user (sign up)
 app.post('/signup', (req, res) => {
   console.log('Request body:', req.body); // Log the request body
-  const sql = "INSERT INTO USERS (username, email, password) VALUES (?, ?, ?)";
-  const values = [req.body.username, req.body.email, req.body.password];
+  const sql = "INSERT INTO USERS (`username`, `email`, `password`) VALUES (?, ?, ?)";
+  const values = [
+    req.body.username,
+    req.body.email,
+    req.body.password
+  ];
   db.query(sql, values, (err, data) => {
     if (err) {
       console.error('Database error:', err); // Log any database errors
@@ -53,10 +37,11 @@ app.post('/signup', (req, res) => {
   });
 });
 
+
 // User login
 app.post('/login', (req, res) => {
   console.log('Request body:', req.body); // Log the request body
-  const sql = "SELECT * FROM users WHERE email = ? AND password = ?";
+  const sql = "SELECT * FROM users WHERE `email` = ? AND `password` = ?";
   db.query(sql, [req.body.email, req.body.password], (err, data) => {
     if (err) {
       console.error('Database error:', err); // Log any database errors
@@ -78,7 +63,8 @@ app.post('/login', (req, res) => {
   });
 });
 
-// Get user by id
+
+//get user by id
 app.get('/users/:id', (req, res) => {
   const userId = req.params.id;
   const sql = "SELECT * FROM users WHERE user_id = ?";
@@ -95,12 +81,18 @@ app.get('/users/:id', (req, res) => {
   });
 });
 
-// Update the user details
+
+//Update the user details 
 app.put('/users/:id', (req, res) => {
   const userId = req.params.id;
   console.log('Request body:', req.body); // Log the request body
   const sql = "UPDATE users SET username = ?, email = ?, password = ? WHERE user_id = ?";
-  const values = [req.body.username, req.body.email, req.body.password, userId];
+  const values = [
+    req.body.username,
+    req.body.email,
+    req.body.password,
+    userId
+  ];
   db.query(sql, values, (err, result) => {
     if (err) {
       console.error('Database error:', err); // Log any database errors
@@ -140,10 +132,9 @@ const convertToMySQLDateTime = (isoDate) => {
   return date.toISOString().slice(0, 19).replace('T', ' ');
 };
 
-// Event creation endpoint with image upload
-app.post('/events', upload.single('image'), (req, res) => {
+// Event creation endpoint
+app.post('/events', (req, res) => {
   console.log('Request body:', req.body); // Log the request body
-  console.log('File:', req.file); // Log the uploaded file
 
   // Extract data from request body
   const {
@@ -151,6 +142,7 @@ app.post('/events', upload.single('image'), (req, res) => {
     description,
     price,
     location,
+    imageUrl,
     is_free,
     categoryId,
     created_by,
@@ -159,16 +151,13 @@ app.post('/events', upload.single('image'), (req, res) => {
     url
   } = req.body;
 
-  // Get the image URL
-  const imageUrl = req.file ? /uploads/${req.file.filename} : null;
-
   // Convert ISO 8601 datetime to MySQL format
   const mysqlStartDateTime = convertToMySQLDateTime(startDateTime);
   const mysqlEndDateTime = convertToMySQLDateTime(endDateTime);
 
   // SQL query to insert the event
-  const sql = "INSERT INTO events (title, description, price, location, imageUrl, is_free, category_id, created_by, startDateTime, endDateTime, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
+  const sql = "INSERT INTO events (title, description, price, location, imageUrl, is_free, categoryId, created_by, startDateTime, endDateTime, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  
   // Values to be inserted
   const values = [
     title,
@@ -194,6 +183,7 @@ app.post('/events', upload.single('image'), (req, res) => {
     return res.status(201).json({ message: 'Event created', eventId: result.insertId });
   });
 });
+
 
 // Get all events
 app.get('/events', (req, res) => {
@@ -234,27 +224,22 @@ app.get('/events/category/:category_id', (req, res) => {
 });
 
 // Update event details
-app.put('/events/:event_id', upload.single('image'), (req, res) => {
+app.put('/events/:event_id', (req, res) => {
   const eventId = req.params.event_id;
   console.log('Request body:', req.body); // Log the request body
-  console.log('File:', req.file); // Log the uploaded file
-
-  // Get the image URL
-  const imageUrl = req.file ? /uploads/${req.file.filename} : req.body.imageUrl;
-
-  const sql = UPDATE events SET title=?, description=?, price=?, location=?, imageUrl=?, is_free=?, category_id=?, startDateTime=?, endDateTime=?, url=? WHERE event_id=?;
+  const sql = "UPDATE events SET title = ?, description = ?, price = ?, location = ?, imageUrl = ?, is_free = ?, categoryId = ?, startDateTime = ?, endDateTime =?, url = ? WHERE event_id = ?";
   const values = [
     req.body.title,
     req.body.description,
     req.body.price,
     req.body.location,
-    imageUrl,
+    req.body.imageUrl,
     req.body.is_free ? 1 : 0, // Convert boolean to tinyint
-    req.body.category_id,
+    req.body.categoryId,
     req.body.startDateTime,
     req.body.endDateTime,
     req.body.url,
-    eventId,
+    eventId
   ];
   db.query(sql, values, (err, result) => {
     if (err) {
@@ -269,10 +254,9 @@ app.put('/events/:event_id', upload.single('image'), (req, res) => {
   });
 });
 
-// Delete event
+// Delete an event
 app.delete('/events/:event_id', (req, res) => {
   const eventId = req.params.event_id;
-  console.log('Request body:', req.body); // Log the request body
   const sql = "DELETE FROM events WHERE event_id = ?";
   db.query(sql, [eventId], (err, result) => {
     if (err) {
@@ -287,13 +271,6 @@ app.delete('/events/:event_id', (req, res) => {
   });
 });
 
-// Serve static files
-app.use('/uploads', express.static(uploadDir));
-
-const PORT = process.env.PORT || 8800;
-app.listen(PORT, () => {
-  console.log(Server is running on port ${PORT});
-});
 
 //***************** category table ****************** */
 

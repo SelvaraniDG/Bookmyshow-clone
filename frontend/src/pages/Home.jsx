@@ -1,5 +1,5 @@
 import React from 'react'
-import Collection from '../components/shared/Collection'
+import Collection from '../components/common/Collection'
 const Home = () => {
   return (
     <>
