@@ -1,14 +1,18 @@
 import React from 'react'
 import Collection from '../components/common/Collection'
+import CustomCarousel from '../components/common/CustomCarousel'
+import SearchBar from '../components/common/SearchBar';
 const Home = () => {
   return (
     <>
       <section>
-            <h1 className="h1-bold">Host, Connect Your Events</h1>
+            <CustomCarousel />
       </section> 
       <div className="flex w-full flex-col gap-5 md:flex-row">
         {/* Replace these placeholders with actual components */}
-        <div>Search</div>
+        <div className='flex m-5'>
+          <SearchBar />
+        </div>
         <div>CategoryFilter</div>
 
         <Collection />

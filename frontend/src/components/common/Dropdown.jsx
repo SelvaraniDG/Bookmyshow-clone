@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../ui/select'; 
+} from '../ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,70 +17,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '../ui/alert-dialog'; 
-import { Input } from '../ui/input'; 
+} from '../ui/alert-dialog';
+import { Input } from '../ui/input';
+import { fetchCategories, addCategory } from '../../services/categoryService';
+import {
+  setCategories,
+  addCategory as addCategoryAction,
+  setLoading,
+  setSucceeded,
+  setFailed,
+} from '../../redux/categorySlice';
 
 const Dropdown = ({ value, onChangeHandler }) => {
-  const [categories, setCategories] = useState([]);
+  const dispatch = useDispatch();
+  const { categories, status, error } = useSelector(state => state.categories);
   const [newCategory, setNewCategory] = useState('');
 
   const handleAddCategory = async () => {
+    dispatch(setLoading());
     try {
-      const response = await fetch('http://localhost:8001/categories', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ cat_name: newCategory.trim() }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create category');
-      }
-
-      const data = await response.json();
-      const addedCategory = { id: data.id, cat_name: newCategory.trim() };
-      
-      setCategories(prevState => [
-        ...prevState,
-        addedCategory,
-      ]);
+      const data = await addCategory(newCategory.trim());
+      dispatch(addCategoryAction({ id: data.id, cat_name: newCategory.trim() }));
       setNewCategory('');
-      
-      onChangeHandler(parseInt(addedCategory.id));
+      onChangeHandler(data.id);
+      dispatch(setSucceeded());
     } catch (error) {
       console.error('Error creating category:', error);
+      dispatch(setFailed(error.message));
     }
   };
 
-  // Fetch all categories
   useEffect(() => {
-    const fetchCategories = async () => {
+    const loadCategories = async () => {
+      dispatch(setLoading());
       try {
-        const response = await fetch('http://localhost:8001/categories');
-        if (!response.ok) {
-          throw new Error('Failed to fetch categories');
-        }
-        const categoryList = await response.json();
-        setCategories(categoryList);
+        const categoryList = await fetchCategories();
+        dispatch(setCategories(categoryList));
+        dispatch(setSucceeded());
       } catch (error) {
         console.error('Error fetching categories:', error);
+        dispatch(setFailed(error.message));
       }
     };
 
-    fetchCategories();
-  }, []);
-
- 
+    loadCategories();
+  }, [dispatch]);
 
   return (
     <Select value={value} onValueChange={onChangeHandler}>
       <SelectTrigger className="select-field">
-      <SelectValue placeholder='Category'>
-      </SelectValue>
+        <SelectValue placeholder="Category" />
       </SelectTrigger>
       <SelectContent>
-        {categories.length > 0 && categories.map((category) => (
+        {categories.length > 0 && categories.map(category => (
           <SelectItem key={category.id} value={category.id.toString()} className="select-item p-regular-14">
             {category.cat_name}
           </SelectItem>

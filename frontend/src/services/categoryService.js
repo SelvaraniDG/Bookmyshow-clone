@@ -1,5 +1,3 @@
-// categoryService.js
-
 const BASE_URL = 'http://localhost:8001';
 
 export const fetchCategories = async () => {

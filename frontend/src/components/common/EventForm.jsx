@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -9,7 +9,7 @@ import { eventDefaultValues } from '../../constants';
 import { eventFormSchema } from '../../lib/validator';
 import Dropdown from './Dropdown';
 import { Textarea } from '../ui/textarea';
-import { FileUploader } from './FileUploader';
+import { FileUpload } from './FileUploader';
 import { Checkbox } from '../ui/checkbox';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,12 +17,11 @@ import LocationGrey from '../../assets/icons/locationgrey';
 import IndianRupee from '../../assets/icons/Indianrupee';
 import Calendar from '../../assets/icons/Calendar';
 import Link from '../../assets/icons/link';
-import convertFileToUrl from './FileUploader';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { createEvent } from '../../redux/eventSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { addEvent, updateEventInState, setStatus, setError } from '../../redux/eventSlice';
+import eventServices from '../../services/eventServices';
 
-// EventForm Component
 const EventForm = ({ type }) => {
   const [files, setFiles] = useState([]);
   const form = useForm({
@@ -32,33 +31,28 @@ const EventForm = ({ type }) => {
   const navigate = useNavigate(); 
   const dispatch = useDispatch();
 
-  const onSubmit = async (values) => {
-    let uploadedImageUrl = values.imageUrl;
-
-    if (files.length > 0) {
-      uploadedImageUrl = files[0] ? convertFileToUrl(files[0]) : uploadedImageUrl;
-    }
-
+  const onSubmit = async (data) => {
+    dispatch(setStatus('loading'));
     try {
-      const user = JSON.parse(localStorage.getItem('user'));
-      const user_id = user ? user.user_id : null;
+      const eventData = {
+        ...data,
+        is_free: data.is_free ? 1 : 0,
+      };
 
-      if (!user_id) {
-        throw new Error('User is not logged in');
+      let response;
+      if (type === 'Create') {
+        response = await eventServices.createEvent(eventData);
+        dispatch(addEvent(response));
+      } else if (type === 'Update') {
+        const eventId = form.getValues('event_id');
+        response = await eventServices.updateEvent(eventId, eventData);
+        dispatch(updateEventInState(response));
       }
 
-      const newEvent = await dispatch(createEvent({
-        ...values,
-        imageUrl: uploadedImageUrl,
-        created_by: user_id, 
-      })).unwrap();
-
-      if (newEvent) {
-        form.reset(); // for resetting the form
-        navigate('/');
-      }
+      dispatch(setStatus('succeeded'));
     } catch (error) {
-      console.log(error);
+      dispatch(setError(error.message));
+      dispatch(setStatus('failed'));
     }
   }
 
@@ -113,7 +107,7 @@ const EventForm = ({ type }) => {
             render={({ field }) => (
               <FormItem className="w-full">
                 <FormControl className="h-72">
-                  <FileUploader
+                  <FileUpload
                     onFieldChange={field.onChange}
                     imageUrl={field.value}
                     setFiles={setFiles}

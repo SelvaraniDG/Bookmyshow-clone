@@ -1,14 +1,37 @@
+
 require('dotenv').config();
 
 const express = require('express');
 const mysql = require('mysql');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const router = express.Router();
+
 
 
 const app = express();
 app.use(cors());
 app.use(express.json()); 
 
+// Configure multer storage
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads');
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname + '_' + Date.now() + path.extname(file.originalname));
+  }
+});
+
+// Create multer instance with custom storage
+const upload = multer({
+  storage: storage, // Use the custom storage configuration
+  limits: { fileSize: 5 * 1024 * 1024 } // Limit file size (5MB)
+});
+
+// MySQL connection configuration
 const db = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -16,11 +39,31 @@ const db = mysql.createConnection({
   host: process.env.DB_HOST,
 });
 
+// Handle file upload
+router.post('/upload', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ Status: 'Error', message: 'No file uploaded' });
+  }
+
+  const file = req.file;
+  // Correct target path for the file
+  const targetPath = path.join(__dirname, 'public', 'uploads', file.filename);
+
+  // Move file to target path
+  fs.rename(file.path, targetPath, (err) => {
+    if (err) {
+      return res.status(500).json({ Status: 'Error', message: 'Error saving file' });
+    }
+    res.status(200).json({ Status: 'Success', file: { filename: file.filename } });
+  });
+});
+
+module.exports = router;
 //****** users table ****************//
 
 //create a new user (sign up)
 app.post('/signup', (req, res) => {
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body);
   const sql = "INSERT INTO USERS (`username`, `email`, `password`) VALUES (?, ?, ?)";
   const values = [
     req.body.username,
@@ -29,10 +72,10 @@ app.post('/signup', (req, res) => {
   ];
   db.query(sql, values, (err, data) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.json("Error");
     }
-    console.log('Data inserted:', data); // Log the inserted data
+    console.log('Data inserted:', data); 
     return res.json(data);
   });
 });
@@ -40,11 +83,11 @@ app.post('/signup', (req, res) => {
 
 // User login
 app.post('/login', (req, res) => {
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body); 
   const sql = "SELECT * FROM users WHERE `email` = ? AND `password` = ?";
   db.query(sql, [req.body.email, req.body.password], (err, data) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ success: false, message: 'Internal server error' });
     }
     if (data.length > 0) {
@@ -57,7 +100,7 @@ app.post('/login', (req, res) => {
     } else {
       return res.json({
         success: false,
-        message: 'Invalid email or password' // Provide a meaningful error message
+        message: 'Invalid email or password' 
       });
     }
   });
@@ -85,7 +128,7 @@ app.get('/users/:id', (req, res) => {
 //Update the user details 
 app.put('/users/:id', (req, res) => {
   const userId = req.params.id;
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body); 
   const sql = "UPDATE users SET username = ?, email = ?, password = ? WHERE user_id = ?";
   const values = [
     req.body.username,
@@ -95,7 +138,7 @@ app.put('/users/:id', (req, res) => {
   ];
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
@@ -109,11 +152,11 @@ app.put('/users/:id', (req, res) => {
 // Delete user account
 app.delete('/users/:id', (req, res) => {
   const userId = req.params.id;
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body);
   const sql = "DELETE FROM users WHERE user_id = ?";
   db.query(sql, [userId], (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
@@ -134,7 +177,7 @@ const convertToMySQLDateTime = (isoDate) => {
 
 // Event creation endpoint
 app.post('/events', (req, res) => {
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body); 
 
   // Extract data from request body
   const {
@@ -165,7 +208,7 @@ app.post('/events', (req, res) => {
     price,
     location,
     imageUrl,
-    is_free ? 1 : 0, // Convert boolean to tinyint
+    is_free ? 1 : 0, 
     categoryId,
     created_by,
     mysqlStartDateTime,
@@ -176,10 +219,10 @@ app.post('/events', (req, res) => {
   // Execute SQL query
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
-    console.log('Data inserted:', result); // Log the inserted data
+    console.log('Data inserted:', result); 
     return res.status(201).json({ message: 'Event created', eventId: result.insertId });
   });
 });
@@ -190,10 +233,27 @@ app.get('/events', (req, res) => {
   const sql = "SELECT * FROM events";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     return res.status(200).json(results);
+  });
+});
+
+// Get event by event_id
+app.get('/events/:event_id', (req, res) => {
+  const eventId = req.params.event_id;
+  const sql = "SELECT * FROM events WHERE event_id = ?";
+  db.query(sql, [eventId], (err, result) => {
+    if (err) {
+      console.error('Database error:', err); 
+      return res.status(500).json({ error: 'Database error' });
+    }
+    if (result.length > 0) {
+      return res.status(200).json(result[0]);
+    } else {
+      return res.status(404).json({ message: 'Event not found' });
+    }
   });
 });
 
@@ -203,7 +263,7 @@ app.get('/events/user/:user_id', (req, res) => {
   const sql = "SELECT * FROM events WHERE created_by = ?";
   db.query(sql, [userId], (err, results) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     return res.status(200).json(results);
@@ -216,7 +276,7 @@ app.get('/events/category/:category_id', (req, res) => {
   const sql = "SELECT * FROM events WHERE category_id = ?";
   db.query(sql, [categoryId], (err, results) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     return res.status(200).json(results);
@@ -226,7 +286,7 @@ app.get('/events/category/:category_id', (req, res) => {
 // Update event details
 app.put('/events/:event_id', (req, res) => {
   const eventId = req.params.event_id;
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body); 
   const sql = "UPDATE events SET title = ?, description = ?, price = ?, location = ?, imageUrl = ?, is_free = ?, categoryId = ?, startDateTime = ?, endDateTime =?, url = ? WHERE event_id = ?";
   const values = [
     req.body.title,
@@ -234,7 +294,7 @@ app.put('/events/:event_id', (req, res) => {
     req.body.price,
     req.body.location,
     req.body.imageUrl,
-    req.body.is_free ? 1 : 0, // Convert boolean to tinyint
+    req.body.is_free ? 1 : 0,
     req.body.categoryId,
     req.body.startDateTime,
     req.body.endDateTime,
@@ -243,7 +303,7 @@ app.put('/events/:event_id', (req, res) => {
   ];
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
@@ -260,7 +320,7 @@ app.delete('/events/:event_id', (req, res) => {
   const sql = "DELETE FROM events WHERE event_id = ?";
   db.query(sql, [eventId], (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
@@ -276,15 +336,15 @@ app.delete('/events/:event_id', (req, res) => {
 
 // Create a new category
 app.post('/categories', (req, res) => {
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body); 
   const sql = "INSERT INTO category (cat_name) VALUES (?)";
   const values = [req.body.cat_name];
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
-    console.log('Data inserted:', result); // Log the inserted data
+    console.log('Data inserted:', result); 
     return res.status(201).json({ message: 'Category created', categoryId: result.insertId });
   });
 });
@@ -294,7 +354,7 @@ app.get('/categories', (req, res) => {
   const sql = "SELECT * FROM category";
   db.query(sql, (err, results) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     return res.status(200).json(results);
@@ -323,12 +383,12 @@ app.get('/categories/:id', (req, res) => {
 // Update category details
 app.put('/categories/:id', (req, res) => {
   const categoryId = req.params.id;
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body); 
   const sql = "UPDATE category SET cat_name = ? WHERE id = ?";
   const values = [req.body.cat_name, categoryId];
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
@@ -345,7 +405,7 @@ app.delete('/categories/:id', (req, res) => {
   const sql = "DELETE FROM category WHERE id = ?";
   db.query(sql, [categoryId], (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
@@ -360,7 +420,7 @@ app.delete('/categories/:id', (req, res) => {
 
 // Create a new order
 app.post('/orders', (req, res) => {
-  console.log('Request body:', req.body); // Log the request body
+  console.log('Request body:', req.body);
   const sql = "INSERT INTO orders (created_at, total_amt, event_id, user_id) VALUES (?, ?, ?, ?)";
   const values = [
     req.body.created_at,
@@ -370,10 +430,10 @@ app.post('/orders', (req, res) => {
   ];
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
-    console.log('Data inserted:', result); // Log the inserted data
+    console.log('Data inserted:', result); 
     return res.status(201).json({ message: 'Order created', orderId: result.insertId });
   });
 });
@@ -384,7 +444,7 @@ app.get('/orders/event/:event_id', (req, res) => {
   const sql = "SELECT * FROM orders WHERE event_id = ?";
   db.query(sql, [eventId], (err, results) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     return res.status(200).json(results);
@@ -397,7 +457,7 @@ app.get('/orders/user/:user_id', (req, res) => {
   const sql = "SELECT * FROM orders WHERE user_id = ?";
   db.query(sql, [userId], (err, results) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     return res.status(200).json(results);
@@ -410,7 +470,7 @@ app.delete('/orders/:id', (req, res) => {
   const sql = "DELETE FROM orders WHERE id = ?";
   db.query(sql, [orderId], (err, result) => {
     if (err) {
-      console.error('Database error:', err); // Log any database errors
+      console.error('Database error:', err); 
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {
