@@ -4,7 +4,15 @@ const baseURL = 'http://localhost:8001';
 
 const eventServices = {
   createEvent: async (eventData) => {
-    const response = await axios.post(`${baseURL}/events`, eventData);
+    const formData = new FormData();
+    Object.keys(eventData).forEach(key => {
+      formData.append(key, eventData[key]);
+    });
+    const response = await axios.post(`${baseURL}/events`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
   fetchEventById: async (eventId) => {
@@ -24,7 +32,15 @@ const eventServices = {
     return response.data;
   },
   updateEvent: async (eventId, eventData) => {
-    const response = await axios.put(`${baseURL}/events/${eventId}`, eventData);
+    const formData = new FormData();
+    Object.keys(eventData).forEach(key => {
+      formData.append(key, eventData[key]);
+    });
+    const response = await axios.put(`${baseURL}/events/${eventId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
   deleteEvent: async (eventId) => {

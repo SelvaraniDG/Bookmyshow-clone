@@ -7,31 +7,31 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const router = express.Router();
-
 
 
 const app = express();
 app.use(cors());
 app.use(express.json()); 
 
-// Configure multer storage
+// Serve static files from the 'uploads' directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads');
+  destination: (req, file, cb) =>{
+    cb(null, 'uploads/');
   },
-  filename: (req, file, cb) => {
-    cb(null, file.originalname + '_' + Date.now() + path.extname(file.originalname));
+  filename: (req, file, cb)=> {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '_' + uniqueSuffix + ext);
   }
-});
+})
 
-// Create multer instance with custom storage
 const upload = multer({
-  storage: storage, // Use the custom storage configuration
-  limits: { fileSize: 5 * 1024 * 1024 } // Limit file size (5MB)
-});
+  storage: storage,
+  limits: {fileSize: 3 * 1024 * 1024 }
+})
 
-// MySQL connection configuration
 const db = mysql.createConnection({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -39,26 +39,18 @@ const db = mysql.createConnection({
   host: process.env.DB_HOST,
 });
 
-// Handle file upload
-router.post('/upload', upload.single('image'), (req, res) => {
+// Set up route to handle file uploads
+app.post('/upload', upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ Status: 'Error', message: 'No file uploaded' });
   }
 
   const file = req.file;
-  // Correct target path for the file
-  const targetPath = path.join(__dirname, 'public', 'uploads', file.filename);
-
-  // Move file to target path
-  fs.rename(file.path, targetPath, (err) => {
-    if (err) {
-      return res.status(500).json({ Status: 'Error', message: 'Error saving file' });
-    }
-    res.status(200).json({ Status: 'Success', file: { filename: file.filename } });
-  });
+  // Respond with file info, including URL or filename
+  res.status(200).json({ Status: 'Success', file: { filename: file.filename } });
 });
 
-module.exports = router;
+
 //****** users table ****************//
 
 //create a new user (sign up)
@@ -176,8 +168,9 @@ const convertToMySQLDateTime = (isoDate) => {
 };
 
 // Event creation endpoint
-app.post('/events', (req, res) => {
+app.post('/events', upload.single('image'), (req, res) => {
   console.log('Request body:', req.body); 
+  console.log('Uploaded image:', req.file);
 
   // Extract data from request body
   const {
@@ -185,7 +178,6 @@ app.post('/events', (req, res) => {
     description,
     price,
     location,
-    imageUrl,
     is_free,
     categoryId,
     created_by,
@@ -197,6 +189,9 @@ app.post('/events', (req, res) => {
   // Convert ISO 8601 datetime to MySQL format
   const mysqlStartDateTime = convertToMySQLDateTime(startDateTime);
   const mysqlEndDateTime = convertToMySQLDateTime(endDateTime);
+
+  //Get image url from the uploaded file
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
   // SQL query to insert the event
   const sql = "INSERT INTO events (title, description, price, location, imageUrl, is_free, categoryId, created_by, startDateTime, endDateTime, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
@@ -270,10 +265,10 @@ app.get('/events/user/:user_id', (req, res) => {
   });
 });
 
-// Get related events by category_id
-app.get('/events/category/:category_id', (req, res) => {
-  const categoryId = req.params.category_id;
-  const sql = "SELECT * FROM events WHERE category_id = ?";
+// Get related events by categoryId
+app.get('/events/category/:categoryId', (req, res) => {
+  const categoryId = req.params.categoryId;
+  const sql = "SELECT * FROM events WHERE categoryId = ?";
   db.query(sql, [categoryId], (err, results) => {
     if (err) {
       console.error('Database error:', err); 
@@ -284,26 +279,53 @@ app.get('/events/category/:category_id', (req, res) => {
 });
 
 // Update event details
-app.put('/events/:event_id', (req, res) => {
+app.put('/events/:event_id', upload.single('image'), (req, res) => {
   const eventId = req.params.event_id;
-  console.log('Request body:', req.body); 
-  const sql = "UPDATE events SET title = ?, description = ?, price = ?, location = ?, imageUrl = ?, is_free = ?, categoryId = ?, startDateTime = ?, endDateTime =?, url = ? WHERE event_id = ?";
+  console.log('Request body:', req.body);
+  console.log('Uploaded file:', req.file);
+
+  // Extract data from request body
+  const {
+    title,
+    description,
+    price,
+    location,
+    is_free,
+    categoryId,
+    startDateTime,
+    endDateTime,
+    url
+  } = req.body;
+
+  // Convert ISO 8601 datetime to MySQL format
+  const mysqlStartDateTime = convertToMySQLDateTime(startDateTime);
+  const mysqlEndDateTime = convertToMySQLDateTime(endDateTime);
+
+  // Get the image URL from the uploaded file
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : req.body.imageUrl;
+
+  // SQL query to update the event
+  const sql = "UPDATE events SET title = ?, description = ?, price = ?, location = ?, imageUrl = ?, is_free = ?, categoryId = ?, startDateTime = ?, endDateTime = ?, url = ? WHERE event_id = ?";
+  
+  // Values to be updated
   const values = [
-    req.body.title,
-    req.body.description,
-    req.body.price,
-    req.body.location,
-    req.body.imageUrl,
-    req.body.is_free ? 1 : 0,
-    req.body.categoryId,
-    req.body.startDateTime,
-    req.body.endDateTime,
-    req.body.url,
+    title,
+    description,
+    price,
+    location,
+    imageUrl,
+    is_free ? 1 : 0,
+    categoryId,
+    mysqlStartDateTime,
+    mysqlEndDateTime,
+    url,
     eventId
   ];
+
+  // Execute SQL query
   db.query(sql, values, (err, result) => {
     if (err) {
-      console.error('Database error:', err); 
+      console.error('Database error:', err);
       return res.status(500).json({ error: 'Database error' });
     }
     if (result.affectedRows > 0) {

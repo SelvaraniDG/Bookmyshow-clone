@@ -9,7 +9,7 @@ import { eventDefaultValues } from '../../constants';
 import { eventFormSchema } from '../../lib/validator';
 import Dropdown from './Dropdown';
 import { Textarea } from '../ui/textarea';
-import { FileUpload } from './FileUploader';
+import { FileUploader } from './FileUploader';
 import { Checkbox } from '../ui/checkbox';
 import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
@@ -17,8 +17,9 @@ import LocationGrey from '../../assets/icons/locationgrey';
 import IndianRupee from '../../assets/icons/Indianrupee';
 import Calendar from '../../assets/icons/Calendar';
 import Link from '../../assets/icons/link';
+import convertFileToUrl from './FileUploader';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { addEvent, updateEventInState, setStatus, setError } from '../../redux/eventSlice';
 import eventServices from '../../services/eventServices';
 
@@ -30,14 +31,22 @@ const EventForm = ({ type }) => {
   });
   const navigate = useNavigate(); 
   const dispatch = useDispatch();
+  // const { status, error } = useSelector(state => state.events);
+  
 
   const onSubmit = async (data) => {
     dispatch(setStatus('loading'));
     try {
+      console.log('Files:', files); // Log files to ensure they are set
+      const imageUrl = data.imageUrl; // Use the image URL from the form field
+      console.log('Image URL:', imageUrl);
       const eventData = {
         ...data,
         is_free: data.is_free ? 1 : 0,
+        imageUrl: data.imageUrl,
       };
+
+      console.log('event data:', eventData);
 
       let response;
       if (type === 'Create') {
@@ -50,6 +59,7 @@ const EventForm = ({ type }) => {
       }
 
       dispatch(setStatus('succeeded'));
+      navigate('/');
     } catch (error) {
       dispatch(setError(error.message));
       dispatch(setStatus('failed'));
@@ -107,7 +117,7 @@ const EventForm = ({ type }) => {
             render={({ field }) => (
               <FormItem className="w-full">
                 <FormControl className="h-72">
-                  <FileUpload
+                  <FileUploader
                     onFieldChange={field.onChange}
                     imageUrl={field.value}
                     setFiles={setFiles}
