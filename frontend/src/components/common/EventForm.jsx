@@ -8,7 +8,7 @@ import { Input } from "../ui/input";
 import { eventDefaultValues } from '../../constants';
 import { eventFormSchema } from '../../lib/validator';
 import Dropdown from './Dropdown';
-import { Textarea } from '../ui/textarea';
+import { Textarea } from '../ui/textarea'
 import { FileUploader } from './FileUploader';
 import { Checkbox } from '../ui/checkbox';
 import DatePicker from 'react-datepicker';
@@ -37,6 +37,13 @@ const EventForm = ({ type }) => {
   const onSubmit = async (data) => {
     dispatch(setStatus('loading'));
     try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const user_id = user ? user.user_id : null;
+
+      if (!user_id) {
+        throw new Error('User is not logged in');
+      }
+
       console.log('Files:', files); // Log files to ensure they are set
       const imageUrl = data.imageUrl; // Use the image URL from the form field
       console.log('Image URL:', imageUrl);
@@ -44,6 +51,7 @@ const EventForm = ({ type }) => {
         ...data,
         is_free: data.is_free ? 1 : 0,
         imageUrl: data.imageUrl,
+        created_by: user_id,
       };
 
       console.log('event data:', eventData);
@@ -65,7 +73,6 @@ const EventForm = ({ type }) => {
       dispatch(setStatus('failed'));
     }
   }
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-5">

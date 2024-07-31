@@ -191,7 +191,7 @@ app.post('/events', upload.single('image'), (req, res) => {
   const mysqlEndDateTime = convertToMySQLDateTime(endDateTime);
 
   //Get image url from the uploaded file
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : req.body.imageUrl;
 
   // SQL query to insert the event
   const sql = "INSERT INTO events (title, description, price, location, imageUrl, is_free, categoryId, created_by, startDateTime, endDateTime, url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
